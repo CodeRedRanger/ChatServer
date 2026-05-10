@@ -117,9 +117,7 @@ void Client::ClientCode(void)
 		//remove the newline character
 		sendbuffer[strcspn(sendbuffer, "\n")] = '\0';
 
-
-		//FIX SO LOGS OUT USER, DO LATER WHEN DOING LOGOUT FUNCTIONALITY
-		//this doesn't seem to work, you don't get disconnected when typing this, just breaks out of loops
+		//this breaks the loop, but will handle better with log out. Could still use this as a way to close the GUI?
 		if (strcmp(sendbuffer, "exit") == 0)
 		{
 			break;
