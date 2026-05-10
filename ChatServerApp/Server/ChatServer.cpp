@@ -117,7 +117,7 @@ void Server::ServerCode(void)
 
 	uint16_t port;
 	int capacity;
-	char commandChar;
+	char commandChar = '~';
 
 	std::cout << "Port: ";
 	std::cin >> port;
@@ -125,8 +125,23 @@ void Server::ServerCode(void)
 	std::cout << "Capacity: ";
 	std::cin >> capacity;
 
+	//flush leftover newline
+	std::cin.ignore(10000, '\n');
+
 	std::cout << "Command character: ";
-	std::cin >> commandChar;
+
+	std::string input;
+	std::getline(std::cin, input);
+
+	if (!input.empty() && input[0] != ' ' && input[0] != '\t')
+	{
+		commandChar = input[0];
+	}
+	else
+	{
+		std::cout << "Invalid or empty input. Defaulting to '~'\n";
+	}
+
 
 	//declare sockets for functions
 	SOCKET listenSocket = INVALID_SOCKET;

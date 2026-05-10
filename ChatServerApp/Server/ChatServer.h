@@ -2,6 +2,8 @@
 #include "MessageHandler.h"
 //for message box A
 #include <Windows.h>
+#include <limits>
+
 
 
 namespace Server
