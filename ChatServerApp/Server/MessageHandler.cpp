@@ -121,6 +121,9 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 		}
 
 
+		//HERE HERE HERE
+		//do I need below and should I move print to broadcast message function? 
+
 		/*
 			broadcastMessage(msg);
 		*/
