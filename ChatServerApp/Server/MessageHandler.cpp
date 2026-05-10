@@ -83,6 +83,13 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg)
 	}
 }
 
+void MessageHandler::HandleGetHelp(SOCKET client, const char cmdChar)
+{
+	std::string commandList = std::string(1, cmdChar) + "register username password to register\n";
+	commandList += std::string(1, cmdChar) + "login username password to login\n";
+	commandList += std::string(1, cmdChar) + "help to get the list of commands\n";
+	TCPFraming::sendFrame(client, commandList.c_str(), (uint16_t)commandList.size());
+}
 
 void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& masterSet, const char cmdChar, const char* msg)
 {
@@ -90,7 +97,8 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	if (!AuthManager::IsLoggedIn(client))
 	{
 		// allow only register/login
-		if (strncmp(msg, "$register", 9) == 0 || strncmp(msg, "$login", 6) == 0)
+		if (strncmp(msg, (std::string(1, cmdChar) + "register").c_str(), 9) == 0 || strncmp(msg, (std::string(1, cmdChar) + "login").c_str(), 6) == 0
+			|| strncmp(msg, (std::string(1, cmdChar) + "help").c_str(), 5) == 0)
 		{
 			//continue
 		}
@@ -135,7 +143,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 
 	std::string registerCmd = std::string(1, cmdChar) + "register";
 	std::string loginCmd = std::string(1, cmdChar) + "login";
-	std::string getlistCmd = std::string(1, cmdChar) + "getlist";
+	std::string helpCmd = std::string(1, cmdChar) + "help";
 
 	if (strncmp(msg, registerCmd.c_str(), registerCmd.length()) == 0)
 	{
@@ -147,10 +155,10 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 		printf("LOGIN COMMAND RECEIVED\n");
 		MessageHandler::HandleLogin(client, msg);
 	}
-	else if (strncmp(msg, getlistCmd.c_str(), getlistCmd.length()) == 0)
+	else if (strncmp(msg, helpCmd.c_str(), helpCmd.length()) == 0)
 	{
-		printf("GETLIST COMMAND\n");
-		//need to print all commands
+		printf("GETHELP COMMAND\n");
+		MessageHandler::HandleGetHelp(client, cmdChar);
 	}
 	else
 	{
