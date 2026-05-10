@@ -11,21 +11,30 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 
 	iss >> command >> username >> password;
 
-	if (!AuthManager::UserExists(username))
+	auto result = AuthManager::loginUser(username, password, client);
+
+	if (result == AuthManager::LoginResult::MISSING_FIELDS)
+	{
+		std::string missingFields = "Missing fields. Please provide both username and password.";
+		TCPFraming::sendFrame(client, missingFields.c_str(), missingFields.size());
+		return;
+	}
+
+	if (result == AuthManager::LoginResult::USER_DOES_NOT_EXIST)
 	{
 		std::string noUser = "User does not exist.";
 		TCPFraming::sendFrame(client, noUser.c_str(), noUser.size());
 		return;
 	}
 
-	if (!AuthManager::CheckPassword(username, password))
+	if (result == AuthManager::LoginResult::PASSWORD_INVALID)
 	{
 		std::string invalidPassword = "Invalid password.";
 		TCPFraming::sendFrame(client, invalidPassword.c_str(), invalidPassword.size());
 		return;
 	}
 
-	if (AuthManager::IsUserLoggedInAnywhere(username))
+	if (result == AuthManager::LoginResult::ALREADY_LOGGEDIN)
 	{
 		std::string alreadyLoggedIn = "That user is already logged in.";
 		TCPFraming::sendFrame(client, alreadyLoggedIn.c_str(), alreadyLoggedIn.size());
@@ -33,9 +42,11 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 	}
 	
 	// SUCCESS
-	AuthManager::SetLoggedIn(client, username);
-	std::string successMsg = "Login successful";
-	TCPFraming::sendFrame(client, successMsg.c_str(), successMsg.size());
+	if (result == AuthManager::LoginResult::SUCCESS)
+	{
+		std::string successMsg = "Login successful";
+		TCPFraming::sendFrame(client, successMsg.c_str(), successMsg.size());
+	}
 	
 }
 
@@ -58,26 +69,32 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg)
 	{
 	case AuthManager::RegisterResult::SUCCESS:
 	{
-		const char* msg = "Username registration succeeded. Please log in.";
 
 		//create wrapper for below so code doesn't have to be repeated below x 2
-		std::string Msg = msg;
-		TCPFraming::sendFrame(client, Msg.c_str(), (uint16_t)Msg.size());
+		std::string msg = "Username registration succeeded. Please log in."; 
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		break;
+	}
+
+	case AuthManager::RegisterResult::MISSING_FIELDS:
+	{
+
+		//create wrapper for below so code doesn't have to be repeated below x 2
+		std::string msg = "Missing fields. Please provide both username and password.";
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
 		break;
 	}
 
 	case AuthManager::RegisterResult::USER_TAKEN:
 	{
-		const char* msg = "username taken";
-		std::string Msg = msg;
-		TCPFraming::sendFrame(client, Msg.c_str(), (uint16_t)Msg.size());
+		std::string msg = "Username taken.";
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
 		break;
 	}
 	case AuthManager::RegisterResult::PASSWORD_INVALID:
 	{
-		const char* msg = "password invalid (must be at least 5 characters)";
-		std::string Msg = msg;
-		TCPFraming::sendFrame(client, Msg.c_str(), (uint16_t)Msg.size());
+		std::string msg = "Password invalid (must be at least 5 characters)";
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
 		break;
 	}
 	}

@@ -56,6 +56,14 @@ void AuthManager::Logout(SOCKET client)
 
  AuthManager::RegisterResult AuthManager::registerUser(const std::string& username, const std::string& password)
  {
+
+	 //nothing put in one or both fields
+     if (username.empty() || password.empty())
+     {
+         return RegisterResult::MISSING_FIELDS;
+     }
+
+
     // 1. check if username exists
         if (users.find(username) != users.end())
         {
@@ -75,4 +83,33 @@ void AuthManager::Logout(SOCKET client)
 
         return RegisterResult::SUCCESS;
   }
+
+ AuthManager::LoginResult AuthManager::loginUser(const std::string& username, const std::string& password, SOCKET client)
+ {
+     if (username.empty() || password.empty())
+     {
+         return LoginResult::MISSING_FIELDS;
+     }
+
+     if (!AuthManager::UserExists(username))
+     {
+         return LoginResult::USER_DOES_NOT_EXIST;
+      
+     }
+
+     if (!AuthManager::CheckPassword(username, password))
+     {
+		 return LoginResult::PASSWORD_INVALID;
+     }
+
+     if (AuthManager::IsUserLoggedInAnywhere(username))
+     {
+         return LoginResult::ALREADY_LOGGEDIN;
+       
+     }
+
+     // SUCCESS
+     AuthManager::SetLoggedIn(client, username);
+	 return LoginResult::SUCCESS;
+ }
 
