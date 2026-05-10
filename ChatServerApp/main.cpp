@@ -5,11 +5,10 @@
 
 #define _CRT_SECURE_NO_WARNINGS                 // turns of deprecated warnings
 #define _WINSOCK_DEPRECATED_NO_WARNINGS         // turns of deprecated warnings for winsock
-#include <winsock2.h>
+//#include <winsock2.h>							// included in TCPFraming.h, which is included in ClientHandler.h and in MessageHandler.h, which is included in ChatServer.h
 //#include <ws2tcpip.h>                         // only need if you use inet_pton
 #pragma comment(lib,"Ws2_32.lib")
 
-#include <iostream>
 #include "./Client/ClientHandler.h"
 #include "./Server/ChatServer.h"
 

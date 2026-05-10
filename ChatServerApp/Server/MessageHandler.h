@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <sstream>
 #include "AuthManager.h"
 #include "TCPFraming.h"

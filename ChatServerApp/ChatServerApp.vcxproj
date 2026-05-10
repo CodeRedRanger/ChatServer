@@ -133,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client\ClientHandler.h" />
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="Server\AuthManager.h" />
     <ClInclude Include="Server\ChatServer.h" />
     <ClInclude Include="Server\MessageHandler.h" />

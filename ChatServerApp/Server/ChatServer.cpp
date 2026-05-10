@@ -34,6 +34,90 @@ TcpFraming	send/recv safety  DONE
 
 */
 
+int Server::InitListeningSocket(uint16_t port, SOCKET& listenSocket, int capacity)
+{
+	
+	//create a socket
+	//AF_INET = IPv4, SOCK_STREAM = TCP, IPPROTO_TCP = TCP protocol
+	listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (listenSocket == INVALID_SOCKET)
+	{
+		printf("DEBUG// Socket function incorrect\n");
+		return SETUP_ERROR;
+	}
+	else
+	{
+		printf("DEBUG// I used the socket function\n");
+	}
+
+
+	//Prepare address struct, sets family to AF_INET (IPv4), address to INADDR_ANY (binds to all available interfaces)
+	//passes port in network byte order (htons = host to network short)
+	sockaddr_in serverAddr = {};
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_addr.S_un.S_addr = INADDR_ANY;
+	serverAddr.sin_port = htons(port); //31337
+
+	//Binds socket to the specified address and port, if it fails, closes the socket and returns an error code
+	//Failure might occur if port in use, admin restrictions or invalid address
+	//also casts the sockaddr_in struct to a generic sockaddr pointer as required by the bind function, and passes the size of the sockaddr_in struct
+	//so that bind knows how much memory to read for the address information
+	int result = bind(listenSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr));
+	if (result == SOCKET_ERROR)
+	{
+		printf("DEBUG// Bind function incorrect\n");
+		closesocket(listenSocket);
+		return BIND_ERROR;
+	}
+	else
+	{
+		printf("DEBUG// I used the bind function\n");
+	}
+
+	//Listen
+	//turns the socket into a listening socket, allowing it to accept incoming connection requests. 
+	// The second parameter (1) specifies the maximum length of the queue of pending connections. 
+	// If it fails, closes the socket and returns an error code. 
+	// Reasons this could fail include if the socket is not properly bound, if the socket is already listening, 
+	// or if there are insufficient system resources to listen on the socket.
+	result = listen(listenSocket, capacity);
+	if (result == SOCKET_ERROR)
+	{
+		printf("DEBUG// Listen function incorrect\n");
+		closesocket(listenSocket);
+		return CONNECT_ERROR;
+	}
+	else
+	{
+		printf("DEBUG// I used the listen function\n");
+	}
+
+
+	return SUCCESS;
+}
+
+void Server::DisconnectClient(SOCKET client, fd_set& masterSet, int& currentClients)
+{
+	Stop(client);
+	FD_CLR(client, &masterSet);
+
+	if (currentClients > 0)
+	{
+		currentClients--;
+	}
+
+	printf("Client disconnected\n");
+}
+
+void Server::Stop(SOCKET socket)
+{
+	if (socket != INVALID_SOCKET)
+	{
+		shutdown(socket, SD_BOTH);
+		closesocket(socket);
+	}
+}
+
 void Server::ServerCode(void)
 {
 
@@ -48,53 +132,39 @@ void Server::ServerCode(void)
 	std::cin >> capacity;
 	//NEED TO PASS THIS SOMEWHERE
 
-
-
 	std::cout << "Command character: ";
 	std::cin >> commandChar;
 
+	//declare sockets for functions
+	SOCKET listenSocket = INVALID_SOCKET;
 
-	//Socket
-	SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (listenSocket == INVALID_SOCKET)
+	int result = Server::InitListeningSocket(port, listenSocket, capacity);
+
+	if (result != SUCCESS)
 	{
-		printf("DEBUG// Socket function incorrect\n");
+		switch (result)
+		{
+		case SETUP_ERROR:
+			MessageBoxA(NULL, "Socket setup failed.", "Server Error", MB_OK | MB_ICONERROR);
+			break;
+
+		case BIND_ERROR:
+			MessageBoxA(NULL, "Bind failed. Port may already be in use.", "Server Error", MB_OK | MB_ICONERROR);
+			break;
+
+		case CONNECT_ERROR:
+			MessageBoxA(NULL, "Listen failed. Unable to accept connections.", "Server Error", MB_OK | MB_ICONERROR);
+			break;
+
+		default:
+			MessageBoxA(NULL, "Unknown server error.", "Server Error", MB_OK | MB_ICONERROR);
+			break;
+		}
+
 		return;
 	}
-	else
-	{
-		printf("DEBUG// I used the socket function\n");
-	}
 
-	//Bind
-	sockaddr_in serverAddr;
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_addr.S_un.S_addr = INADDR_ANY;
-	serverAddr.sin_port = htons(port); //31337	
-
-	int result = bind(listenSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr));
-	if (result == SOCKET_ERROR)
-	{
-		printf("DEBUG// Bind function incorrect\n");
-		return;
-	}
-	else
-	{
-		printf("DEBUG// I used the bind function\n");
-	}
-
-	//Listen
-	result = listen(listenSocket, 1);
-	if (result == SOCKET_ERROR)
-	{
-		printf("DEBUG// Listen function incorrect\n");
-		return;
-	}
-	else
-	{
-		printf("DEBUG// I used the listen function\n");
-	}
-
+	
 	fd_set masterSet;
 	fd_set readySet;
 
@@ -198,109 +268,22 @@ void Server::ServerCode(void)
 			}
 			else
 			{
-				uint8_t size = 0;
-
-				int result = recv(currentSocket, (char*)&size, 1, 0);
-
-				if (result <= 0)
-				{
-					closesocket(currentSocket);
-					FD_CLR(currentSocket, &masterSet);
-					printf("Client disconnected\n");
-					currentClients--;
-					continue;
-				}
-
-				//char buffer[256] = {};
-				//prevent overflow of the buffer if the client sends a size larger than 256 when + '\0' for null terminator
 				char buffer[257] = {};
 
+				int result = TCPFraming::readFrame(currentSocket, buffer, sizeof(buffer));
 
-				//result = recv(currentSocket, buffer, size, 0);
-				result = TCPFraming::tcp_recv_whole(currentSocket, buffer, size);
-
-				if (result <= 0)
+				if (result != SUCCESS)
 				{
-					closesocket(currentSocket);
-					FD_CLR(currentSocket, &masterSet);
-					printf("Client disconnected\n");
-					currentClients--;
+					DisconnectClient(currentSocket, masterSet, currentClients);
 					continue;
 				}
 
-				buffer[size] = '\0';
-
-				if (result > 0)
-				{
-
-					//printf("Message: %s\n", buffer); 
-					MessageHandler::HandleCommand(currentSocket, listenSocket, masterSet, commandChar, buffer);
-
-				}
-
+				MessageHandler::HandleCommand(currentSocket, listenSocket, masterSet, commandChar, buffer);
 
 			}
 		}
 	}
 
 
-	printf("Waiting...\n\n");
-
-	SOCKET ComSocket = accept(listenSocket, NULL, NULL);
-	if (ComSocket == INVALID_SOCKET)
-	{
-		printf("DEBUG// Accept function incorrect\n");
-		return;
-
-	}
-	else
-	{
-		printf("DEBUG// I used the accept function\n");
-	}
-
-	//Communication
-	uint8_t size = 0;
-
-	result = TCPFraming::tcp_recv_whole(ComSocket, (char*)&size, 1);
-	if ((result == SOCKET_ERROR) || (result == 0))
-	{
-		int error = WSAGetLastError();
-		printf("DEBUG// recv is incorrect\n");
-		return;
-
-	}
-	else
-	{
-		printf("DEBUG// I used the recv function\n");
-	}
-
-	char* buffer = new char[size];
-
-	result = TCPFraming::tcp_recv_whole(ComSocket, (char*)buffer, size);
-	if ((result == SOCKET_ERROR) || (result == 0))
-	{
-		int error = WSAGetLastError();
-		printf("DEBUG// recv is incorrect\n");
-		return;
-
-	}
-	else
-	{
-		printf("DEBUG// I used the recv function\n");
-	}
-
-	printf("DEBUG// I received a message from the client\n");
-
-	printf("\n\n");
-	printf(buffer);
-	printf("\n\n");
-
-	delete[] buffer;
-
-	// close both sockets
-	shutdown(listenSocket, SD_BOTH);
-	closesocket(listenSocket);
-
-	shutdown(ComSocket, SD_BOTH);
-	closesocket(ComSocket);
 }
+
