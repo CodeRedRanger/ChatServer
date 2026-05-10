@@ -85,9 +85,12 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg)
 
 void MessageHandler::HandleGetHelp(SOCKET client, const char cmdChar)
 {
-	std::string commandList = std::string(1, cmdChar) + "register username password to register\n";
-	commandList += std::string(1, cmdChar) + "login username password to login\n";
-	commandList += std::string(1, cmdChar) + "help to get the list of commands\n";
+	std::string commandList = "To register: ";
+	commandList += std::string(1, cmdChar) + "register username password\n";
+	commandList += "To login: ";
+	commandList += std::string(1, cmdChar) + "login username password\n";
+	commandList += "To get help: ";
+	commandList += std::string(1, cmdChar) + "help\n";
 	TCPFraming::sendFrame(client, commandList.c_str(), (uint16_t)commandList.size());
 }
 
