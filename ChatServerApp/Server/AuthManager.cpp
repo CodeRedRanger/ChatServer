@@ -48,6 +48,11 @@ bool AuthManager::IsUserLoggedInAnywhere(const std::string& username)
     return false;
 }
 
+void AuthManager::Logout(SOCKET client)
+{
+    loggedInUsers.erase(client);
+}
+
 
  AuthManager::RegisterResult AuthManager::registerUser(const std::string& username, const std::string& password)
  {

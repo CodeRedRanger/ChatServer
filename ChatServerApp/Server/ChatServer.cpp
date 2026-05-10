@@ -140,6 +140,8 @@ void Server::ServerCode(void)
 
 	int result = Server::InitListeningSocket(port, listenSocket, capacity);
 
+
+
 	if (result != SUCCESS)
 	{
 		switch (result)
@@ -268,11 +270,19 @@ void Server::ServerCode(void)
 			}
 			else
 			{
-				char buffer[257] = {};
+				char buffer[256] = {};
 
 				int result = TCPFraming::readFrame(currentSocket, buffer, sizeof(buffer));
 
-				if (result != SUCCESS)
+				if (result == SHUTDOWN || result == DISCONNECT)
+				{
+					DisconnectClient(currentSocket, masterSet, currentClients);
+					AuthManager::Logout(currentSocket);
+					continue;
+				}
+
+				// ONLY treat real socket failure as disconnect
+				if (result < 0)
 				{
 					DisconnectClient(currentSocket, masterSet, currentClients);
 					continue;

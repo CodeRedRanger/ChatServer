@@ -97,6 +97,7 @@ void MessageHandler::HandleGetHelp(SOCKET client, const char cmdChar)
 void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& masterSet, const char cmdChar, const char* msg)
 {
 
+	/*
 	if (!AuthManager::IsLoggedIn(client))
 	{
 		// allow only register/login
@@ -112,9 +113,38 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 			return;
 		}
 	}
+	*/
+	
+	if (!AuthManager::IsLoggedIn(client))
+	{
+		std::string cmd(msg);
+		cmd.erase(std::remove(cmd.begin(), cmd.end(), '\r'), cmd.end());
+		cmd.erase(std::remove(cmd.begin(), cmd.end(), '\n'), cmd.end());
+
+		bool allowed =
+			cmd.rfind(std::string(1, cmdChar) + "register", 0) == 0 ||
+			cmd.rfind(std::string(1, cmdChar) + "login", 0) == 0 ||
+			cmd.rfind(std::string(1, cmdChar) + "help", 0) == 0;
+
+
+		if (!allowed)
+		{
+			std::string mustLogin =
+				"You must register or login first. Use "
+				+ std::string(1, cmdChar)
+				+ "register or "
+				+ std::string(1, cmdChar)
+				+ "login.";
+
+			TCPFraming::sendFrame(client, mustLogin.c_str(), mustLogin.size());
+			return; 
+		}
+	}
+	
 
 	if (!msg || msg[0] != cmdChar)
 	{
+
 	
 		for (int i = 0; i < masterSet.fd_count; i++)
 		{
@@ -126,8 +156,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 			if (!AuthManager::IsLoggedIn(s))
 				continue; // block non-logged-in users from receiving chat
 
-			std::string Msg = msg; 
-			TCPFraming::sendFrame(s, Msg.c_str(), (uint16_t)Msg.size());
+			TCPFraming::sendFrame(s, msg, (uint16_t)strlen(msg));
 		
 		}
 
