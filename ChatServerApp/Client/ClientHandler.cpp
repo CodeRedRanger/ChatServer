@@ -3,6 +3,7 @@
 #include "ClientHandler.h"
 
 
+//gracefully closes socket by first shutting down both send and receive operations, then closing the socket handle.
 void Client::Stop(SOCKET socket)
 {
 	if (socket != INVALID_SOCKET)
@@ -14,9 +15,10 @@ void Client::Stop(SOCKET socket)
 
 int Client::InitCommSocket(SOCKET& comSocket, uint16_t port, const char* address)
 {
-	// Socket
+	// Creates Communcation Socket
 	comSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
+	// Check for socket creation error
 	if (comSocket == INVALID_SOCKET)
 	{
 		return SETUP_ERROR;
@@ -25,21 +27,22 @@ int Client::InitCommSocket(SOCKET& comSocket, uint16_t port, const char* address
 	// Connect
 	sockaddr_in serverAddr = {};
 
+	//sets family to AF_INET (IPv4), address to the provided address converted from string to binary form using InetPtonA, and port in network byte order (htons = host to network short)
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(port);
 
+	// Convert address string to binary form and store in serverAddr.sin_addr, if it fails, closes the socket and returns an error code.
 	if (InetPtonA(AF_INET, address, &serverAddr.sin_addr) != 1)
 	{
 		closesocket(comSocket);
 		return ADDRESS_ERROR;
 	}
 
-	int result = connect(
-		comSocket,
-		(SOCKADDR*)&serverAddr,
-		sizeof(serverAddr)
-	);
+	// Connect to the server
+	int result = connect(comSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr));
 
+	// If it fails, closes the socket and returns an error code. Reasons this could fail include if the server is not running, 
+	// if the address or port is incorrect, or if there are network issues preventing the connection, firewall.
 	if (result == SOCKET_ERROR)
 	{
 		closesocket(comSocket);
@@ -55,11 +58,8 @@ void Client::ClientCode(void)
 {
 	SOCKET ComSocket = INVALID_SOCKET;
 
-	int result = InitCommSocket(
-		ComSocket,
-		31337,
-		(char*)"127.0.0.1"
-	);
+	//hardcoded address and port for testing, can change later to user input or config file
+	int result = InitCommSocket(ComSocket, 31337,(char*)"127.0.0.1");
 
 	if (result != SUCCESS)
 	{
@@ -72,94 +72,65 @@ void Client::ClientCode(void)
 
 
 	//Communication
-	char sendbuffer[30];
-	memset(sendbuffer, 0, 30);
-	strcpy(sendbuffer, "I'm a message from the client");
-
-	/*
-	uint8_t size = strlen(sendbuffer);
-
-	result = TCPFraming::tcp_send_whole(ComSocket, (char*)&size, 1);
-	if ((result == SOCKET_ERROR) || (result == 0))
-	{
-		int error = WSAGetLastError();
-		printf("DEBUG// send is incorrect\n");
-		return;
-
-	}
-	else
-	{
-		printf("DEBUG// I used the send function\n");
-	}
-
-	result = TCPFraming::tcp_send_whole(ComSocket, sendbuffer, size);
-	*/
-
-	result = TCPFraming::sendFrame(
-		ComSocket,
-		sendbuffer,
-		(uint16_t)strlen(sendbuffer)
-	);
-
-	if (result != SUCCESS)
-	{
-		printf("DEBUG// send failed\n");
-		return;
-	}
-
-	if ((result == SOCKET_ERROR) || (result == 0))
-	{
-		int error = WSAGetLastError();
-		printf("DEBUG// send is incorrect\n");
-		return;
-
-	}
-	else
-	{
-		printf("DEBUG// I used the send function\n");
-	}
-
-	printf("DEBUG// I sent a message to the server\n");
-
-
+	//can receive 256 + 1 for size byte, but buffer needs to be 257 to hold null terminator for printf
 	char recvbuffer[257] = {};
 
-	result = TCPFraming::readFrame(
-		ComSocket,
-		recvbuffer,
-		sizeof(recvbuffer)
-	);
-
-	if (result == SUCCESS)
+	while (true)
 	{
-		printf("%s\n", recvbuffer);
+		result = TCPFraming::readFrame(ComSocket, recvbuffer, sizeof(recvbuffer));
+
+		if (result == SUCCESS)
+		{
+			printf("%s\n", recvbuffer);
+		}
+		else if (result == SHUTDOWN)
+		{
+			printf("Server closed connection.\n");
+			break;
+		}
+		else if (result == DISCONNECT)
+		{
+			printf("Connection lost.\n");
+			break;
+		}
+		else if (result == PARAMETER_ERROR)
+		{
+			printf("Warning: malformed message received.\n");
+			continue; // NOT fatal
+		}
+		else
+		{
+			printf("Unknown error (%d)\n", result);
+			break;
+		}
 	}
-
-
 
 	//need to adjust this so you can get out of loop by typing exit
 	while (true)
 	{
+		//input buffer
 		char sendbuffer[256] = {};
 
+		//reads full line from keyboard input into sendbuffer, including spaces, until newline is encountered or buffer limit is reached.
 		fgets(sendbuffer, sizeof(sendbuffer), stdin);
 
+		//remove the newline character
 		sendbuffer[strcspn(sendbuffer, "\n")] = '\0';
 
+
+		//FIX SO LOGS OUT USER, DO LATER WHEN DOING LOGOUT FUNCTIONALITY
+		//this doesn't seem to work, you don't get disconnected when typing this, just breaks out of loops
 		if (strcmp(sendbuffer, "exit") == 0)
 		{
 			break;
 		}
 
-		result = TCPFraming::sendFrame(
-			ComSocket,
-			sendbuffer,
-			(uint16_t)strlen(sendbuffer)
-		);
+		result = TCPFraming::sendFrame(ComSocket,sendbuffer, (uint16_t)strlen(sendbuffer));
 
 		if (result != SUCCESS)
 		{
-			printf("DEBUG// send failed\n");
+			//simple succeed or fail is find for sending messages
+			printf("Connection lost while sending.\n");
 			break;
 		}
 	}

@@ -4,14 +4,7 @@
 /*
 
 //Put in message handler
-/*
-//inside message handler file
-1. Command detection
-if (msg[0] == '~')
-
 2. Routing
-if (command == "register") → AuthManager
-if (command == "login")    → AuthManager
 if (command == "send")     → broadcast logic
 
 3. Public messages
@@ -19,7 +12,6 @@ Anything without command character at the start of message
 broadcast public chat
 
 //command parsing layer (move to messageHandler)
-//registration logic (move to authManager)
 //authentication state tracking (move to authManager)
 //routing between commands vs chat messages (move to messageHandler)
 
@@ -99,6 +91,8 @@ int Server::InitListeningSocket(uint16_t port, SOCKET& listenSocket, int capacit
 void Server::DisconnectClient(SOCKET client, fd_set& masterSet, int& currentClients)
 {
 	Stop(client);
+
+	//select no longer needs to monitor this socket for activity, so it's removed from the master set of sockets
 	FD_CLR(client, &masterSet);
 
 	if (currentClients > 0)
@@ -130,7 +124,6 @@ void Server::ServerCode(void)
 
 	std::cout << "Capacity: ";
 	std::cin >> capacity;
-	//NEED TO PASS THIS SOMEWHERE
 
 	std::cout << "Command character: ";
 	std::cin >> commandChar;
@@ -141,7 +134,7 @@ void Server::ServerCode(void)
 	int result = Server::InitListeningSocket(port, listenSocket, capacity);
 
 
-
+	//handle errors with listening socket setup, bind and listen
 	if (result != SUCCESS)
 	{
 		switch (result)
@@ -170,9 +163,12 @@ void Server::ServerCode(void)
 	fd_set masterSet;
 	fd_set readySet;
 
+	//clear set
 	FD_ZERO(&masterSet);
+	//adds listening socket to the master set
 	FD_SET(listenSocket, &masterSet);
 
+	//initially, the ready set is the same as the master set, but it will be modified by select to indicate which sockets are ready for reading
 	readySet = masterSet;
 
 	char host[256];
@@ -200,10 +196,12 @@ void Server::ServerCode(void)
 		}
 		else
 		{
+
 			sockaddr_in6* ipv6 = (sockaddr_in6*)ptr->ai_addr;
 			address = &(ipv6->sin6_addr);
 		}
 
+		//make binary IP address human-readable
 		inet_ntop(ptr->ai_family, address, ipString, sizeof(ipString));
 
 		//printf("IP Address: %s\n", ipString);
@@ -219,6 +217,7 @@ void Server::ServerCode(void)
 
 	}
 
+	//freeaddrinfo is called to free the memory allocated by getaddrinfo for the linked list of address information
 	freeaddrinfo(addressResult);
 
 
@@ -227,16 +226,19 @@ void Server::ServerCode(void)
 	{
 		readySet = masterSet;
 
+		//blocking. waits for activity on any socket in the ready set, or new connections.
 		int socketCount = select(0, &readySet, nullptr, nullptr, nullptr);
 
 		SOCKET clientSocket = INVALID_SOCKET;
 
+		//loop through ready sockets and check if activity is on listening socket (new connection) or client socket (incoming message)
 		for (int i = 0; i < socketCount; i++)
 		{
 			SOCKET currentSocket = readySet.fd_array[i];
 
 			if (currentSocket == listenSocket)
 			{
+				//check for server full, accept then close if server full
 				if (currentClients >= capacity)
 				{
 					SOCKET temp = accept(listenSocket, NULL, NULL);
@@ -248,6 +250,7 @@ void Server::ServerCode(void)
 					continue;
 				}
 
+				//accept new connection, add to master set and increment client count
 				clientSocket = accept(listenSocket, NULL, NULL);
 
 				if (clientSocket != INVALID_SOCKET)
@@ -255,8 +258,7 @@ void Server::ServerCode(void)
 					FD_SET(clientSocket, &masterSet);
 					currentClients++;
 
-
-
+					//send welcome message to client
 					std::string welcome =
 						std::string("Welcome to the chat server. Please use ")
 						+ commandChar +
@@ -270,21 +272,24 @@ void Server::ServerCode(void)
 			}
 			else
 			{
+				//read message from client, handle disconnects and shutdowns, pass valid messages to message handler
 				char buffer[256] = {};
 
 				int result = TCPFraming::readFrame(currentSocket, buffer, sizeof(buffer));
 
+
+				if (result == PARAMETER_ERROR)
+				{
+					printf("Invalid frame received\n");
+					continue;
+				}
+
+
+				//Handle graceful shutdowns and connection errors
 				if (result == SHUTDOWN || result == DISCONNECT)
 				{
 					DisconnectClient(currentSocket, masterSet, currentClients);
 					AuthManager::Logout(currentSocket);
-					continue;
-				}
-
-				// ONLY treat real socket failure as disconnect
-				if (result < 0)
-				{
-					DisconnectClient(currentSocket, masterSet, currentClients);
 					continue;
 				}
 
