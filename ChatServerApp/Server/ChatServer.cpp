@@ -259,6 +259,8 @@ void Server::ServerCode(void)
 					SOCKET temp = accept(listenSocket, NULL, NULL);
 					if (temp != INVALID_SOCKET)
 					{
+						std::string msg = "Server full. Please try again later.";
+						TCPFraming::sendFrame(temp, msg.c_str(), msg.size());
 						printf("Server full - rejecting client\n");
 						closesocket(temp);
 					}
