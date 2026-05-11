@@ -11,9 +11,11 @@ namespace AuthManager
     enum class RegisterResult
     {
         SUCCESS,
+		SERVER_FULL,
         MISSING_FIELDS,
         USER_TAKEN,
         PASSWORD_INVALID
+       
     };
 
     enum class LoginResult
@@ -22,10 +24,11 @@ namespace AuthManager
         MISSING_FIELDS,
         USER_DOES_NOT_EXIST,
         PASSWORD_INVALID,
-        ALREADY_LOGGEDIN
+        ALREADY_LOGGEDIN,
+		MUST_LOGOUT_FIRST
     };
 
-    RegisterResult registerUser(const std::string& username, const std::string& password);
+    RegisterResult registerUser(const std::string& username, const std::string& password, int capacity);
 	LoginResult loginUser(const std::string& username, const std::string& password, SOCKET client);
     void AddUser(const std::string& username, const std::string& password);
     bool UserExists(const std::string& username); 

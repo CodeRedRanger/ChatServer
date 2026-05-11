@@ -42,6 +42,13 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 		TCPFraming::sendFrame(client, alreadyLoggedIn.c_str(), alreadyLoggedIn.size());
 		return;
 	}
+
+	if (result == AuthManager::LoginResult::MUST_LOGOUT_FIRST)
+	{
+		std::string mustLogoutFirst = "You must logout of your current account before logging into another.";
+		TCPFraming::sendFrame(client, mustLogoutFirst.c_str(), mustLogoutFirst.size());
+		return;
+	}
 	
 	// SUCCESS
 	if (result == AuthManager::LoginResult::SUCCESS)
@@ -53,7 +60,7 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 }
 
 
-void MessageHandler::HandleRegister(SOCKET client, const std::string& msg)
+void MessageHandler::HandleRegister(SOCKET client, const std::string& msg, int capacity)
 {
 	//split income string into tokens by whitespace, first token is command, second is username, third is password, if missing fields, will be handled by AuthManager
 	std::istringstream iss(msg);
@@ -65,7 +72,7 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg)
 	iss >> command >> username >> password;
 
 	//delegates registering user to AuthManager, and results are handled below.
-	auto result = AuthManager::registerUser(username, password);
+	auto result = AuthManager::registerUser(username, password, capacity);
 
 
 	switch (result)
@@ -75,6 +82,15 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg)
 
 		//create wrapper for below so code doesn't have to be repeated below x 2
 		std::string msg = "Username registration succeeded. Please log in."; 
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		break;
+	}
+
+	case AuthManager::RegisterResult::SERVER_FULL:
+	{
+
+		//create wrapper for below so code doesn't have to be repeated below x 2
+		std::string msg = "Server at maximum number of users. Unable to register new users at this time.";
 		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
 		break;
 	}
@@ -116,7 +132,7 @@ void MessageHandler::HandleGetHelp(SOCKET client, const char cmdChar)
 }
 
 //routing brain
-void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& masterSet, const char cmdChar, const char* msg)
+void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& masterSet, const char cmdChar, const char* msg, int capacity)
 {
 
 	//makes sure client is logged in before anything messages can be sent. If not logged in, does allow for register, login and help commands.
@@ -196,7 +212,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	if (strncmp(msg, registerCmd.c_str(), registerCmd.length()) == 0)
 	{
 		printf("REGISTER COMMAND RECEIVED\n");
-		MessageHandler::HandleRegister(client, msg);
+		MessageHandler::HandleRegister(client, msg, capacity);
 	}
 	else if (strncmp(msg, loginCmd.c_str(), loginCmd.length()) == 0)
 	{

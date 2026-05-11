@@ -39,7 +39,7 @@ void AuthManager::SetLoggedIn(SOCKET client, const std::string& username)
 
 bool AuthManager::IsLoggedIn(SOCKET client)
 {
-	//checks if client socket is found before end of loggedInUsers map, returns true if found (indicating that the client is logged in for that socket), otherwise false
+	//checks if client socket is found before end of loggedInUsers map, returns true if found (indicating that a client is logged in for that socket), otherwise false
     return AuthManager::loggedInUsers.find(client) != AuthManager::loggedInUsers.end();
 }
 
@@ -62,8 +62,13 @@ void AuthManager::Logout(SOCKET client)
 }
 
 
- AuthManager::RegisterResult AuthManager::registerUser(const std::string& username, const std::string& password)
+ AuthManager::RegisterResult AuthManager::registerUser(const std::string& username, const std::string& password, int capacity)
  {
+
+     if (users.size() >= capacity)
+     {
+         return RegisterResult::SERVER_FULL; 
+	 }
 
 	 //nothing put in one or both fields
      if (username.empty() || password.empty())
@@ -115,6 +120,11 @@ void AuthManager::Logout(SOCKET client)
          return LoginResult::ALREADY_LOGGEDIN;
        
      }
+
+     if (AuthManager::IsLoggedIn(client))
+     {
+         return LoginResult::MUST_LOGOUT_FIRST;
+	 }
 
      // SUCCESS
      AuthManager::SetLoggedIn(client, username);

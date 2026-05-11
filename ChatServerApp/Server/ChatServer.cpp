@@ -310,7 +310,7 @@ void Server::ServerCode(void)
 					continue;
 				}
 
-				MessageHandler::HandleCommand(currentSocket, listenSocket, masterSet, commandChar, buffer);
+				MessageHandler::HandleCommand(currentSocket, listenSocket, masterSet, commandChar, buffer, capacity);
 
 			}
 		}
