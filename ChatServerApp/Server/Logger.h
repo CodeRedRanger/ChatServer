@@ -19,4 +19,5 @@ namespace Logger
 
 	std::string GetTimestamp();
 	std::string GetCurrentUser(SOCKET client);
+	std::string GetPublicChatLog();
 }

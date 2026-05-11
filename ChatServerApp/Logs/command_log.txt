@@ -32,3 +32,35 @@
 [2026-05-11 14:59] [Unknown User] $register tom *********
 [2026-05-11 14:59] [Unknown User] $login tom *********
 [2026-05-11 14:59] [tom] $hello out *********
+[2026-05-11 15:08] [Unknown User] $register robb *********
+[2026-05-11 15:08] [Unknown User] $login robb *********
+[2026-05-11 15:09] [Unknown User] $register tom *********
+[2026-05-11 15:09] [Unknown User] $login tom *********
+[2026-05-11 15:09] [tom] $getlog  
+[2026-05-11 15:10] [robb] $getlog  
+[2026-05-11 15:10] [robb] $getlog  
+[2026-05-11 15:11] [tom] $getlog  
+[2026-05-11 15:11] [tom] $getlog  
+[2026-05-11 15:34] [Unknown User] $register robb *********
+[2026-05-11 15:34] [Unknown User] $login robb *********
+[2026-05-11 15:34] [Unknown User] $register tom *********
+[2026-05-11 15:34] [Unknown User] $login tom *********
+[2026-05-11 15:34] [robb] $getlog  
+[2026-05-11 15:35] [tom] $getlog  
+[2026-05-11 15:41] [Unknown User] $register robb *********
+[2026-05-11 15:41] [Unknown User] $login robb *********
+[2026-05-11 15:41] [Unknown User] $register tom *********
+[2026-05-11 15:41] [Unknown User] $login tom *********
+[2026-05-11 15:41] [tom] $getlog  
+[2026-05-11 15:51] [Unknown User] $register robb *********
+[2026-05-11 15:51] [Unknown User] $login robb *********
+[2026-05-11 15:51] [robb] $getlog  
+[2026-05-11 15:52] [Unknown User] $register robb 
+[2026-05-11 15:52] [Unknown User] $register robb *********
+[2026-05-11 15:53] [Unknown User] $login robb *********
+[2026-05-11 15:53] [Unknown User] $register robb *********
+[2026-05-11 15:53] [Unknown User] $login robb *********
+[2026-05-11 15:53] [robb] $getlog  
+[2026-05-11 15:56] [Unknown User] $register robb *********
+[2026-05-11 15:56] [Unknown User] $login robb *********
+[2026-05-11 15:56] [robb] $getlog  

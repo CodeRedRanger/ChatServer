@@ -1,0 +1,13 @@
+[2026-05-11 15:09] [tom] hey!
+[2026-05-11 15:09] [robb] hey back!
+[2026-05-11 15:10] [tom] I just checked our log!
+[2026-05-11 15:10] [robb] And?
+[2026-05-11 15:10] [tom] You should check it too, you use $getlog
+[2026-05-11 15:10] [robb] Ok, trying now...
+[2026-05-11 15:11] [robb] Weird it's not working now
+[2026-05-11 15:11] [tom] I know
+[2026-05-11 15:34] [tom] Hi!
+[2026-05-11 15:34] [robb] Hey!
+[2026-05-11 15:35] [tom] That worked!
+[2026-05-11 15:41] [tom] Hey again!
+[2026-05-11 15:41] [robb] Hey again back!

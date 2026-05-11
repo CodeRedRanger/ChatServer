@@ -89,3 +89,19 @@ void Logger::LogPublicMessage(SOCKET client, const std::string& message)
 		std::cout << "Could not open log file\n";
 	}
 }
+
+std::string Logger::GetPublicChatLog()
+{
+	std::ifstream file("./Logs/public_chat_log.txt");
+	std::stringstream buffer;
+	if (file.is_open())
+	{
+		buffer << file.rdbuf();
+		file.close();
+	}
+	else
+	{
+		std::cout << "Could not open log file\n";
+	}
+	return buffer.str();
+}

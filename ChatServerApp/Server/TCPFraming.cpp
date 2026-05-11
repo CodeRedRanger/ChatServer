@@ -121,3 +121,32 @@ int TCPFraming::readFrame(SOCKET s, char* buffer, uint16_t bufferSize)
 	return SUCCESS;
 }
 
+void TCPFraming::SendLargeFrame(SOCKET s, const std::string& msg)
+{
+	const size_t MAX_CHUNK = 255;
+
+	size_t offset = 0;
+
+	while (offset < msg.size())
+	{
+		size_t remaining = msg.size() - offset;
+
+		size_t chunkSize;
+
+		if (remaining > MAX_CHUNK)
+			chunkSize = MAX_CHUNK;
+		else
+			chunkSize = remaining;
+
+		sendFrame(
+			s,
+			msg.c_str() + offset,
+			(uint16_t)chunkSize
+		);
+
+		offset += chunkSize;
+	}
+
+	// end marker
+	//sendFrame(s, "", 0);
+}

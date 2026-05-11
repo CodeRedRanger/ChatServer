@@ -81,6 +81,7 @@ void Client::ClientCode(void)
 
 		if (result == SUCCESS)
 		{
+
 			printf("%s\n", recvbuffer);
 		}
 		else if (result == SHUTDOWN)

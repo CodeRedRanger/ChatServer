@@ -192,9 +192,16 @@ void MessageHandler::HandleGetList(SOCKET client)
 	TCPFraming::sendFrame(client, userListStr.c_str(), (uint16_t)userListStr.size());
 }
 
-void HandleGetLog(SOCKET client)
+void MessageHandler::HandleGetLog(SOCKET client)
 {
-	//nothing yet
+	//HERE
+	//get file and and need input stream, that you print
+
+	std::string chatLog = Logger::GetPublicChatLog(); 
+
+	//log is too long for sending most times... need to split into multiple messages if exceeds 255 characters, and send each message separately.
+	TCPFraming::SendLargeFrame(client, chatLog);
+
 }
 
 //routing brain
@@ -320,7 +327,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	else if (strncmp(msg, getLogCmd.c_str(), getLogCmd.length()) == 0)
 	{
 		printf("GETLOG COMMAND RECEIVED\n");
-		//MessageHandler::HandleGetLog(client, msg);
+		MessageHandler::HandleGetLog(client);
 	}
 	else
 	{
