@@ -46,6 +46,8 @@ namespace AuthManager
     bool IsLoggedIn(SOCKET client);
     bool IsUserLoggedInAnywhere(const std::string& username); 
 
+    std::vector<std::string> GetLoggedInUsers();
+
 
     extern std::unordered_map<std::string, std::string> users;
     extern std::unordered_map<SOCKET, std::string> loggedInUsers;

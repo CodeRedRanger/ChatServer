@@ -128,6 +128,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Server\AuthManager.cpp" />
     <ClCompile Include="Server\ChatServer.cpp" />
+    <ClCompile Include="Server\Logger.cpp" />
     <ClCompile Include="Server\MessageHandler.cpp" />
     <ClCompile Include="Server\TCPFraming.cpp" />
   </ItemGroup>
@@ -136,9 +137,14 @@
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Server\AuthManager.h" />
     <ClInclude Include="Server\ChatServer.h" />
+    <ClInclude Include="Server\Logger.h" />
     <ClInclude Include="Server\MessageHandler.h" />
     <ClInclude Include="Server\TCPFraming.h" />
     <ClInclude Include="User.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Logs\command_log.txt" />
+    <Text Include="Logs\public_chat_log.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

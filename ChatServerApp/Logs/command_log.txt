@@ -1,0 +1,34 @@
+[bob] $help
+[Unknown User] $help
+[Unknown User] $login robb robby
+[Unknown User] $register robb robby
+[Unknown User] $login robb robby
+[robb] $register tom tommy
+[robb] $help
+[robb] $getlist
+[robb] $logout
+[Unknown User] $help  
+[Unknown User] $login robb *********
+[Unknown User] $register robb *********
+[Unknown User] $login robb *********
+[robb] $help  
+[robb] $getlist  
+[robb] $register tom *********
+[robb] $login tom *********
+[robb] $logout  
+[Unknown User] $register robb *********
+[Unknown User] $login robb *********
+[robb] $login tom *********
+[Unknown User] $register robb *********
+[Unknown User] $login robb *********
+[robb] $login tom *********
+[2026-05-11 14:50] [Unknown User] $login robb *********
+[2026-05-11 14:50] [Unknown User] $register robb *********
+[2026-05-11 14:50] [Unknown User] $login robb *********
+[2026-05-11 14:50] [robb] $help  
+[2026-05-11 14:50] [robb] $logout  
+[2026-05-11 14:58] [Unknown User] $register robb *********
+[2026-05-11 14:58] [Unknown User] $login robb *********
+[2026-05-11 14:59] [Unknown User] $register tom *********
+[2026-05-11 14:59] [Unknown User] $login tom *********
+[2026-05-11 14:59] [tom] $hello out *********

@@ -1,7 +1,6 @@
 #pragma once
-#include <sstream>
-#include "AuthManager.h"
 #include "TCPFraming.h"
+#include "Logger.h"
 
 
 namespace MessageHandler
@@ -12,5 +11,11 @@ namespace MessageHandler
 	void HandleLogin(SOCKET client, const std::string& msg);
 	void HandleLogout(SOCKET client, const std::string& msg);
 	void HandleGetHelp(SOCKET client, const char cmdChar); 
+
+	//not sure about parameters below
+	void HandleSend(SOCKET client, const std::string& msg, SOCKET listenSocket, fd_set& masterSet, const char cmdChar);
+
+	void HandleGetList(SOCKET client);
+	void HandleGetLog(SOCKET client);
 
 }

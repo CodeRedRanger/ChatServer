@@ -110,6 +110,12 @@ AuthManager::LogoutResult AuthManager::logoutUser(SOCKET client)
 
  AuthManager::LoginResult AuthManager::loginUser(const std::string& username, const std::string& password, SOCKET client)
  {
+
+     if (AuthManager::IsLoggedIn(client))
+     {
+         return LoginResult::MUST_LOGOUT_FIRST;
+     }
+
      if (username.empty() || password.empty())
      {
          return LoginResult::MISSING_FIELDS;
@@ -135,13 +141,17 @@ AuthManager::LogoutResult AuthManager::logoutUser(SOCKET client)
        
      }
 
-     if (AuthManager::IsLoggedIn(client))
-     {
-         return LoginResult::MUST_LOGOUT_FIRST;
-	 }
-
      // SUCCESS
      AuthManager::SetLoggedIn(client, username);
 	 return LoginResult::SUCCESS;
  }
 
+ std::vector<std::string> AuthManager::GetLoggedInUsers()
+ {
+     std::vector<std::string> userList;
+     for (const auto& pair : loggedInUsers)
+     {
+         userList.push_back(pair.second);
+     }
+     return userList;
+ }

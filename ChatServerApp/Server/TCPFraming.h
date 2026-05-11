@@ -1,7 +1,6 @@
 #pragma once
 #include <winsock2.h>
 #include <cstdint>
-#include <iostream>
 #include "../Constants.h"
 
 namespace TCPFraming

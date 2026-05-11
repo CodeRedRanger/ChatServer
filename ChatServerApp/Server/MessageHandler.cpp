@@ -15,6 +15,14 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 	//delegates logging user to AuthManager, and results are handled below.
 	auto result = AuthManager::loginUser(username, password, client);
 
+	//switch would be better, then order of below wouldn't matter
+	if (result == AuthManager::LoginResult::MUST_LOGOUT_FIRST)
+	{
+		std::string mustLogoutFirst = "You must logout of your current account before logging into another.";
+		TCPFraming::sendFrame(client, mustLogoutFirst.c_str(), mustLogoutFirst.size());
+		return;
+	}
+
 	if (result == AuthManager::LoginResult::MISSING_FIELDS)
 	{
 		std::string missingFields = "Missing fields. Please provide both username and password.";
@@ -43,12 +51,7 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 		return;
 	}
 
-	if (result == AuthManager::LoginResult::MUST_LOGOUT_FIRST)
-	{
-		std::string mustLogoutFirst = "You must logout of your current account before logging into another.";
-		TCPFraming::sendFrame(client, mustLogoutFirst.c_str(), mustLogoutFirst.size());
-		return;
-	}
+
 	
 	// SUCCESS
 	if (result == AuthManager::LoginResult::SUCCESS)
@@ -176,6 +179,24 @@ void MessageHandler::HandleGetHelp(SOCKET client, const char cmdChar)
 	TCPFraming::sendFrame(client, commandList.c_str(), (uint16_t)commandList.size());
 }
 
+//handle get list command by sending a list of currently logged in users to the client, checks with AuthManager for list of logged in users, formats into a string and sends to client
+void MessageHandler::HandleGetList(SOCKET client)
+{
+	std::vector<std::string> userList = AuthManager::GetLoggedInUsers();
+	std::string userListStr = "Active users:\n";
+	for (int i = 0; i < userList.size(); i++)
+	{
+		userListStr += userList[i] + "\n";
+	}
+
+	TCPFraming::sendFrame(client, userListStr.c_str(), (uint16_t)userListStr.size());
+}
+
+void HandleGetLog(SOCKET client)
+{
+	//nothing yet
+}
+
 //routing brain
 void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& masterSet, const char cmdChar, const char* msg, int capacity)
 {
@@ -244,6 +265,9 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 		//all messages printed to server. 
 		//eventually will log all public messages so can print out complete chat history (need additional command)
 		printf("Public message: %s\n", msg);
+
+		Logger::LogPublicMessage(client, msg); 
+
 		return;
 	}
 
@@ -255,6 +279,10 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	std::string sendCmd = std::string(1, cmdChar) + "send";
 	std::string getListCmd = std::string(1, cmdChar) + "getlist";
 	std::string getLogCmd = std::string(1, cmdChar) + "getlog";
+
+
+
+	Logger::LogCommand(client, msg);
 
 	//checks if the beginning of the message matches any of the known commands, and if so, calls the appropriate handler function for that command. 
 	if (strncmp(msg, registerCmd.c_str(), registerCmd.length()) == 0)
@@ -286,7 +314,8 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	else if (strncmp(msg, getListCmd.c_str(), getListCmd.length()) == 0)
 	{
 		printf("GETLIST COMMAND RECEIVED\n");
-		MessageHandler::HandleGetList(client, msg);
+		MessageHandler::HandleGetList(client);
+
 	}
 	else if (strncmp(msg, getLogCmd.c_str(), getLogCmd.length()) == 0)
 	{
