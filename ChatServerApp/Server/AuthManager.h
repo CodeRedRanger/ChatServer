@@ -14,7 +14,8 @@ namespace AuthManager
 		SERVER_FULL,
         MISSING_FIELDS,
         USER_TAKEN,
-        PASSWORD_INVALID
+        PASSWORD_INVALID,
+        MUST_LOGOUT_FIRST
        
     };
 
@@ -28,17 +29,23 @@ namespace AuthManager
 		MUST_LOGOUT_FIRST
     };
 
-    RegisterResult registerUser(const std::string& username, const std::string& password, int capacity);
+    enum class LogoutResult
+    {
+        SUCCESS,
+		NOT_LOGGEDIN
+    };
+
+    RegisterResult registerUser(const std::string& username, const std::string& password, int capacity, SOCKET client);
 	LoginResult loginUser(const std::string& username, const std::string& password, SOCKET client);
     void AddUser(const std::string& username, const std::string& password);
     bool UserExists(const std::string& username); 
+    LogoutResult logoutUser(SOCKET client);
 
     bool CheckPassword(const std::string& username, const std::string& password);
     void SetLoggedIn(SOCKET client, const std::string& username);
     bool IsLoggedIn(SOCKET client);
     bool IsUserLoggedInAnywhere(const std::string& username); 
 
-    void Logout(SOCKET client);
 
     extern std::unordered_map<std::string, std::string> users;
     extern std::unordered_map<SOCKET, std::string> loggedInUsers;

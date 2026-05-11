@@ -306,7 +306,7 @@ void Server::ServerCode(void)
 				if (result == SHUTDOWN || result == DISCONNECT)
 				{
 					DisconnectClient(currentSocket, masterSet, currentClients);
-					AuthManager::Logout(currentSocket);
+					AuthManager::logoutUser(currentSocket);
 					continue;
 				}
 

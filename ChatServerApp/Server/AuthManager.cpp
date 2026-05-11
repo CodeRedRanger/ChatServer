@@ -54,16 +54,30 @@ bool AuthManager::IsUserLoggedInAnywhere(const std::string& username)
     return false;
 }
 
-void AuthManager::Logout(SOCKET client)
+AuthManager::LogoutResult AuthManager::logoutUser(SOCKET client)
 {
+
+
+    if (!AuthManager::IsLoggedIn(client))
+    {
+        return LogoutResult::NOT_LOGGEDIN;
+    }
+
     //removes the entry for the client socket from the loggedInUsers map, effectively logging out the user associated with that socket
 	//since you can only be logged in on one socket at a time, this will log out the user regardless of which socket they are logged in on
     loggedInUsers.erase(client);
+
+    //need other return scenarios
+	return LogoutResult::SUCCESS;
 }
 
 
- AuthManager::RegisterResult AuthManager::registerUser(const std::string& username, const std::string& password, int capacity)
+ AuthManager::RegisterResult AuthManager::registerUser(const std::string& username, const std::string& password, int capacity, SOCKET client)
  {
+     if (AuthManager::IsLoggedIn(client))
+     {
+         return RegisterResult::MUST_LOGOUT_FIRST; 
+	 }
 
      if (users.size() >= capacity)
      {

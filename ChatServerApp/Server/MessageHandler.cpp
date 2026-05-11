@@ -60,6 +60,38 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 }
 
 
+void MessageHandler::HandleLogout(SOCKET client, const std::string& msg)
+{
+
+	//split income string into tokens by whitespace, first token is command, second is username, third is password, if missing fields, will be handled by AuthManager
+	std::istringstream iss(msg);
+
+	std::string command;
+	std::string username;
+	std::string password;
+
+	iss >> command >> username >> password;
+
+	//delegates logging user to AuthManager, and results are handled below.
+	auto result = AuthManager::logoutUser(client);
+
+	if (result == AuthManager::LogoutResult::NOT_LOGGEDIN)
+	{
+		std::string notLoggedIn = "You are not logged in.";
+		TCPFraming::sendFrame(client, notLoggedIn.c_str(), notLoggedIn.size());
+		return;
+	}
+
+	// SUCCESS
+	if (result == AuthManager::LogoutResult::SUCCESS)
+	{
+		std::string successMsg = "Logout successful";
+		TCPFraming::sendFrame(client, successMsg.c_str(), successMsg.size());
+	}
+
+}
+
+
 void MessageHandler::HandleRegister(SOCKET client, const std::string& msg, int capacity)
 {
 	//split income string into tokens by whitespace, first token is command, second is username, third is password, if missing fields, will be handled by AuthManager
@@ -72,7 +104,7 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg, int c
 	iss >> command >> username >> password;
 
 	//delegates registering user to AuthManager, and results are handled below.
-	auto result = AuthManager::registerUser(username, password, capacity);
+	auto result = AuthManager::registerUser(username, password, capacity, client);
 
 
 	switch (result)
@@ -80,8 +112,15 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg, int c
 	case AuthManager::RegisterResult::SUCCESS:
 	{
 
-		//create wrapper for below so code doesn't have to be repeated below x 2
 		std::string msg = "Username registration succeeded. Please log in."; 
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		break;
+	}
+
+	case AuthManager::RegisterResult::MUST_LOGOUT_FIRST:
+	{
+
+		std::string msg = "You must logout of your current account before registering a new one.";
 		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
 		break;
 	}
@@ -89,7 +128,6 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg, int c
 	case AuthManager::RegisterResult::SERVER_FULL:
 	{
 
-		//create wrapper for below so code doesn't have to be repeated below x 2
 		std::string msg = "Server at maximum number of users. Unable to register new users at this time.";
 		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
 		break;
@@ -98,7 +136,6 @@ void MessageHandler::HandleRegister(SOCKET client, const std::string& msg, int c
 	case AuthManager::RegisterResult::MISSING_FIELDS:
 	{
 
-		//create wrapper for below so code doesn't have to be repeated below x 2
 		std::string msg = "Missing fields. Please provide both username and password.";
 		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
 		break;
@@ -128,6 +165,14 @@ void MessageHandler::HandleGetHelp(SOCKET client, const char cmdChar)
 	commandList += std::string(1, cmdChar) + "login username password\n";
 	commandList += "To get help: ";
 	commandList += std::string(1, cmdChar) + "help\n";
+	commandList += "To logout: ";
+	commandList += std::string(1, cmdChar) + "logout\n";
+	commandList += "To send private message: ";
+	commandList += std::string(1, cmdChar) + "send username [message]\n";
+	commandList += "To get list of active users: ";
+	commandList += std::string(1, cmdChar) + "getlist\n";
+	commandList += "To get log of public messages: ";
+	commandList += std::string(1, cmdChar) + "getlog\n";
 	TCPFraming::sendFrame(client, commandList.c_str(), (uint16_t)commandList.size());
 }
 
@@ -207,6 +252,9 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	std::string loginCmd = std::string(1, cmdChar) + "login";
 	std::string helpCmd = std::string(1, cmdChar) + "help";
 	std::string logoutCmd = std::string(1, cmdChar) + "logout";
+	std::string sendCmd = std::string(1, cmdChar) + "send";
+	std::string getListCmd = std::string(1, cmdChar) + "getlist";
+	std::string getLogCmd = std::string(1, cmdChar) + "getlog";
 
 	//checks if the beginning of the message matches any of the known commands, and if so, calls the appropriate handler function for that command. 
 	if (strncmp(msg, registerCmd.c_str(), registerCmd.length()) == 0)
@@ -224,19 +272,31 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 		printf("GETHELP COMMAND\n");
 		MessageHandler::HandleGetHelp(client, cmdChar);
 	}
-	//handle logout too
-	/*
 	
 	else if (strncmp(msg, logoutCmd.c_str(), logoutCmd.length()) == 0)
 	{
 		printf("LOGOUT COMMAND RECEIVED\n");
-		MessageHandler::HandleLogout(client, cmdChar);
-		//model after handle login above and improve login function in AuthManager
+		MessageHandler::HandleLogout(client, msg);
 	}
-
-	*/
+	else if (strncmp(msg, sendCmd.c_str(), sendCmd.length()) == 0)
+	{
+		printf("SEND COMMAND RECEIVED\n");
+		//MessageHandler::HandleSend(client, msg);
+	}
+	else if (strncmp(msg, getListCmd.c_str(), getListCmd.length()) == 0)
+	{
+		printf("GETLIST COMMAND RECEIVED\n");
+		MessageHandler::HandleGetList(client, msg);
+	}
+	else if (strncmp(msg, getLogCmd.c_str(), getLogCmd.length()) == 0)
+	{
+		printf("GETLOG COMMAND RECEIVED\n");
+		//MessageHandler::HandleGetLog(client, msg);
+	}
 	else
 	{
+		std::string unknownCmd = "Unknown user command.";
+		TCPFraming::sendFrame(client, unknownCmd.c_str(), (uint16_t)unknownCmd.size());
 		printf("UNKNOWN COMMAND\n");
 	}
 }
