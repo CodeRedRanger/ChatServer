@@ -35,8 +35,18 @@ namespace AuthManager
 		NOT_LOGGEDIN
     };
 
+    enum class ReceiverResult
+    {
+        SUCCESS,
+        MISSING_FIELDS,
+        NOT_LOGGED_IN,
+        USER_DOES_NOT_EXIST,
+        SELF_MESSAGE
+    };
+
     RegisterResult registerUser(const std::string& username, const std::string& password, int capacity, SOCKET client);
 	LoginResult loginUser(const std::string& username, const std::string& password, SOCKET client);
+
     void AddUser(const std::string& username, const std::string& password);
     bool UserExists(const std::string& username); 
     LogoutResult logoutUser(SOCKET client);
@@ -45,8 +55,10 @@ namespace AuthManager
     void SetLoggedIn(SOCKET client, const std::string& username);
     bool IsLoggedIn(SOCKET client);
     bool IsUserLoggedInAnywhere(const std::string& username); 
-
     std::vector<std::string> GetLoggedInUsers();
+
+    ReceiverResult CheckReceiver(SOCKET sender, const std::string& receiver);
+    SOCKET GetSocket(const std::string& username); 
 
 
     extern std::unordered_map<std::string, std::string> users;

@@ -40,7 +40,6 @@ void Logger::LogCommand(SOCKET client, const std::string& commandStr)
 
 	std::string timestamp = GetTimestamp();
 
-	//WILL HAVE TO EXCLUDE $SEND command from logging (private)
 	//search for username associated with client socket, and log that username with the message, so can track who is sending which messages in server logs
 	//if client not in loggedInUsers map for some reason, will log as "Unknown User"
 	std::string currentUser = Logger::GetCurrentUser(client);
@@ -83,6 +82,9 @@ void Logger::LogPublicMessage(SOCKET client, const std::string& message)
 	if (file.is_open())
 	{
 		file << "[" << timestamp << "] [" << currentUser << "] " << message << std::endl;
+
+		//all public messages printed to server. 
+		printf("Public message: [%s] %s\n", currentUser.c_str(), message.c_str());
 	}
 	else
 	{

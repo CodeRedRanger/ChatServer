@@ -13,7 +13,7 @@ namespace MessageHandler
 	void HandleGetHelp(SOCKET client, const char cmdChar); 
 
 	//not sure about parameters below
-	void HandleSend(SOCKET client, const std::string& msg, SOCKET listenSocket, fd_set& masterSet, const char cmdChar);
+	void HandleSend(SOCKET client, const std::string& msg);
 
 	void HandleGetList(SOCKET client);
 	void HandleGetLog(SOCKET client);

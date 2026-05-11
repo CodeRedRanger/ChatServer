@@ -30,6 +30,22 @@ bool AuthManager::CheckPassword(const std::string& username, const std::string& 
 	return it->second == password;
 }
 
+SOCKET AuthManager::GetSocket(const std::string& username)
+{
+    //iterate through all sockets, if username for socket = passed username, then return that socket
+
+    for (auto it = loggedInUsers.begin(); it != loggedInUsers.end(); ++it)
+    {
+        if(it->second == username)
+        {
+            return it->first;
+		}
+    }
+
+    //handle this error in MessageHandler
+    return INVALID_SOCKET;
+}
+
 void AuthManager::SetLoggedIn(SOCKET client, const std::string& username)
 {
 	//creates an entry in loggedInUsers map with client socket as key and username as value, effectively marking the user as logged in on that socket
@@ -154,4 +170,31 @@ AuthManager::LogoutResult AuthManager::logoutUser(SOCKET client)
          userList.push_back(pair.second);
      }
      return userList;
+ }
+
+ AuthManager::ReceiverResult AuthManager::CheckReceiver(SOCKET sender, const std::string& receiver)
+ {
+
+
+     if (receiver.empty())
+     {
+         return ReceiverResult::MISSING_FIELDS;
+     }
+
+     if (sender == AuthManager::GetSocket(receiver))
+     {
+         return ReceiverResult::SELF_MESSAGE;
+     }
+
+     if (!AuthManager::UserExists(receiver))
+     {
+         return ReceiverResult::USER_DOES_NOT_EXIST;
+     }
+
+     if (!AuthManager::IsUserLoggedInAnywhere(receiver))
+     {
+         return ReceiverResult::NOT_LOGGED_IN;
+     }
+
+     return ReceiverResult::SUCCESS;
  }

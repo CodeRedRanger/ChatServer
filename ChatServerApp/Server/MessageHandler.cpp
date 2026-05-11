@@ -66,14 +66,6 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 void MessageHandler::HandleLogout(SOCKET client, const std::string& msg)
 {
 
-	//split income string into tokens by whitespace, first token is command, second is username, third is password, if missing fields, will be handled by AuthManager
-	std::istringstream iss(msg);
-
-	std::string command;
-	std::string username;
-	std::string password;
-
-	iss >> command >> username >> password;
 
 	//delegates logging user to AuthManager, and results are handled below.
 	auto result = AuthManager::logoutUser(client);
@@ -194,13 +186,90 @@ void MessageHandler::HandleGetList(SOCKET client)
 
 void MessageHandler::HandleGetLog(SOCKET client)
 {
-	//HERE
-	//get file and and need input stream, that you print
-
+	
 	std::string chatLog = Logger::GetPublicChatLog(); 
 
 	//log is too long for sending most times... need to split into multiple messages if exceeds 255 characters, and send each message separately.
 	TCPFraming::SendLargeFrame(client, chatLog);
+
+}
+
+void MessageHandler::HandleSend(SOCKET client, const std::string& msg)
+{
+	//split into command, receiver and message, if missing fields, can send error message back to client
+	//other errors include receiver not logged in. 
+	//only send to the receiver's socket instead of all.
+	//format message as [sender -> receiver] message
+
+	//split income string into tokens by whitespace, first token is command, second is receiver, third is message, if missing fields
+	std::istringstream iss(msg);
+
+	std::string command;
+	std::string receiver;
+	std::string message;
+
+	iss >> command >> receiver;
+
+	// consume remaining text INCLUDING spaces
+	std::getline(iss, message);
+
+	// remove leading space (getline keeps it)
+	if (!message.empty() && message[0] == ' ')
+		message.erase(0, 1);
+
+
+	//delegates registering user to AuthManager, and results are handled below.
+	auto result = AuthManager::CheckReceiver(client,receiver);
+
+
+	switch (result)
+	{
+	case AuthManager::ReceiverResult::SUCCESS:
+	{
+		//below is just for testing, nothing should happen on sender side, this should trigger message to receiver
+		SOCKET receiverSocket = AuthManager::GetSocket(receiver);
+		if (receiverSocket != INVALID_SOCKET)
+		{
+			std::string msgToSend = "[" + Logger::GetCurrentUser(client) + " -> " + receiver + "] " + message;
+			TCPFraming::sendFrame(receiverSocket, msgToSend.c_str(), (uint16_t)msgToSend.size());
+		}
+		else
+		{
+			std::string msg = "An error occurred while trying to send the message.";
+			TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		}
+		break;
+	}
+	case AuthManager::ReceiverResult::SELF_MESSAGE:
+	{
+		std::string msg = "You cannot send a message to yourself.";
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		break;
+	}
+
+	case AuthManager::ReceiverResult::MISSING_FIELDS:
+	{
+
+		std::string msg = "Missing field. Please provide receiver username.";
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		break;
+	}
+
+	case AuthManager::ReceiverResult::USER_DOES_NOT_EXIST:
+	{
+		std::string msg = "Receiver username does not exist.";
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		break;
+	}
+	case AuthManager::ReceiverResult::NOT_LOGGED_IN:
+	{
+		std::string msg = "Receiver is not logged in.";
+		TCPFraming::sendFrame(client, msg.c_str(), (uint16_t)msg.size());
+		break;
+	}
+	}
+
+
 
 }
 
@@ -257,22 +326,22 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 				continue; // block non-logged-in users from receiving chat
 
 			//otherwise can send message to socket s
-			TCPFraming::sendFrame(s, msg, (uint16_t)strlen(msg));
-		
+			//prefix with username of sender
+			std::string currentUser = "[" + Logger::GetCurrentUser(client) + " -> all]";
+			std::string msgToSend = currentUser + " " + std::string(msg);
+			//TCPFraming::sendFrame(s, msg, (uint16_t)strlen(msg));
+			TCPFraming::sendFrame(s, msgToSend.c_str(), (uint16_t)msgToSend.size());
 		}
 
 
-		//HERE HERE HERE
+		//UDP Broadcast, handle later, separate thread
 		//do I need below and should I move print to broadcast message function? 
 
 		/*
 			broadcastMessage(msg);
 		*/
 
-		//all messages printed to server. 
-		//eventually will log all public messages so can print out complete chat history (need additional command)
-		printf("Public message: %s\n", msg);
-
+		//Log all public messages so can print out complete chat history with getLog command
 		Logger::LogPublicMessage(client, msg); 
 
 		return;
@@ -288,8 +357,11 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	std::string getLogCmd = std::string(1, cmdChar) + "getlog";
 
 
-
-	Logger::LogCommand(client, msg);
+	//log commands, but will exclude private messages (send command) from logging for privacy.
+	if (strncmp(msg, sendCmd.c_str(), sendCmd.length()) != 0)
+	{
+		Logger::LogCommand(client, msg);
+	}
 
 	//checks if the beginning of the message matches any of the known commands, and if so, calls the appropriate handler function for that command. 
 	if (strncmp(msg, registerCmd.c_str(), registerCmd.length()) == 0)
@@ -316,7 +388,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	else if (strncmp(msg, sendCmd.c_str(), sendCmd.length()) == 0)
 	{
 		printf("SEND COMMAND RECEIVED\n");
-		//MessageHandler::HandleSend(client, msg);
+		MessageHandler::HandleSend(client, msg);
 	}
 	else if (strncmp(msg, getListCmd.c_str(), getListCmd.length()) == 0)
 	{
