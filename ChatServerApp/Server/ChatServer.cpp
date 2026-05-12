@@ -51,7 +51,10 @@ recvfrom(s,buffer,length,flags,NULL,NULL);
 
 
 
-void ThreadEntryPoint(std::atomic<bool>& activeUsers)
+void ThreadEntryPoint(
+	std::atomic<bool>& activeUsers,
+	std::string ipAddress,
+	uint16_t tcpPort)
 {
 	using namespace std::chrono;
 
@@ -102,12 +105,16 @@ void ThreadEntryPoint(std::atomic<bool>& activeUsers)
 
 		if (elapsed.count() >= 5)
 		{
-			const char* msg = "The server will be offline for routine maintenance tonight starting at 11:59 PM Eastern Time.";
+			//const char* msg = "The server will be offline for routine maintenance tonight starting at 11:59 PM Eastern Time.";
+
+			std::string msg =
+				ipAddress + ":" +
+				std::to_string(tcpPort);
 
 			int result = sendto(
 				udpSocket,
-				msg,
-				(int)strlen(msg),
+				msg.c_str(),
+				(int)msg.size(),
 				0,
 				(sockaddr*)&broadcastAddr,
 				sizeof(broadcastAddr));
@@ -234,12 +241,6 @@ void Server::ServerCode(void)
 	std::thread udpThread;
 
 
-
-	
-
-
-
-
 	uint16_t port;
 	int capacity;
 	char commandChar = '~';
@@ -323,6 +324,7 @@ void Server::ServerCode(void)
 
 	getaddrinfo(host, NULL, &hints, &addressResult);
 
+	std::string serverIP;
 	for (addrinfo* ptr = addressResult; ptr != NULL; ptr = ptr->ai_next)
 	{
 		char ipString[INET6_ADDRSTRLEN];
@@ -349,6 +351,7 @@ void Server::ServerCode(void)
 		if (ptr->ai_family == AF_INET)
 		{
 			printf("IPv4 Address: %s\n", ipString);
+			serverIP = ipString;
 		}
 		else if (ptr->ai_family == AF_INET6)
 		{
@@ -415,7 +418,11 @@ void Server::ServerCode(void)
 					if (currentClients == 1)
 					{
 						activeUsers = true;
-						udpThread = std::thread(ThreadEntryPoint, std::ref(activeUsers));
+						udpThread = std::thread(
+							ThreadEntryPoint,
+							std::ref(activeUsers),
+							serverIP,
+							port);
 					
 					}
 
