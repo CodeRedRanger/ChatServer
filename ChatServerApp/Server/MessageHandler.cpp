@@ -63,9 +63,9 @@ void MessageHandler::HandleLogin(SOCKET client, const std::string& msg)
 }
 
 
-void MessageHandler::HandleLogout(SOCKET client, const std::string& msg)
+bool MessageHandler::HandleLogout(SOCKET client, const std::string& msg)
 {
-
+	bool disconnect = false; 
 
 	//delegates logging user to AuthManager, and results are handled below.
 	auto result = AuthManager::logoutUser(client);
@@ -74,15 +74,20 @@ void MessageHandler::HandleLogout(SOCKET client, const std::string& msg)
 	{
 		std::string notLoggedIn = "You are not logged in.";
 		TCPFraming::sendFrame(client, notLoggedIn.c_str(), notLoggedIn.size());
-		return;
+		return disconnect;
 	}
 
 	// SUCCESS
 	if (result == AuthManager::LogoutResult::SUCCESS)
 	{
+
+
 		std::string successMsg = "Logout successful";
 		TCPFraming::sendFrame(client, successMsg.c_str(), successMsg.size());
+		disconnect = true; 
 	}
+
+	return disconnect; 
 
 }
 
@@ -274,8 +279,9 @@ void MessageHandler::HandleSend(SOCKET client, const std::string& msg)
 }
 
 //routing brain
-void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& masterSet, const char cmdChar, const char* msg, int capacity)
+bool MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& masterSet, const char cmdChar, const char* msg, int capacity)
 {
+	bool disconnect = false; 
 
 	//makes sure client is logged in before anything messages can be sent. If not logged in, does allow for register, login and help commands.
 	if (!AuthManager::IsLoggedIn(client))
@@ -302,7 +308,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 				+ "login.";
 
 			TCPFraming::sendFrame(client, mustLogin.c_str(), mustLogin.size());
-			return; 
+			return disconnect; 
 		}
 	}
 	
@@ -344,7 +350,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 		//Log all public messages so can print out complete chat history with getLog command
 		Logger::LogPublicMessage(client, msg); 
 
-		return;
+		return disconnect;
 	}
 
 	//handle commands (can expand later to include logout, private message, etc.)
@@ -383,7 +389,7 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 	else if (strncmp(msg, logoutCmd.c_str(), logoutCmd.length()) == 0)
 	{
 		printf("LOGOUT COMMAND RECEIVED\n");
-		MessageHandler::HandleLogout(client, msg);
+		disconnect = MessageHandler::HandleLogout(client, msg);
 	}
 	else if (strncmp(msg, sendCmd.c_str(), sendCmd.length()) == 0)
 	{
@@ -407,6 +413,8 @@ void MessageHandler::HandleCommand(SOCKET client, SOCKET listenSocket, fd_set& m
 		TCPFraming::sendFrame(client, unknownCmd.c_str(), (uint16_t)unknownCmd.size());
 		printf("UNKNOWN COMMAND\n");
 	}
+
+	return disconnect; 
 }
 
 

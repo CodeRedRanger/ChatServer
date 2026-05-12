@@ -310,7 +310,14 @@ void Server::ServerCode(void)
 					continue;
 				}
 
-				MessageHandler::HandleCommand(currentSocket, listenSocket, masterSet, commandChar, buffer, capacity);
+				bool shouldDisconnect = false;
+				shouldDisconnect = MessageHandler::HandleCommand(currentSocket, listenSocket, masterSet, commandChar, buffer, capacity);
+
+				if (shouldDisconnect)
+				{
+					DisconnectClient(currentSocket, masterSet, currentClients);
+					continue;
+				}
 
 			}
 		}
