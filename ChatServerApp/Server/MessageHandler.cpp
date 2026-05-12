@@ -191,7 +191,9 @@ void MessageHandler::HandleGetList(SOCKET client)
 
 void MessageHandler::HandleGetLog(SOCKET client)
 {
+
 	
+
 	std::string chatLog = Logger::GetPublicChatLog(); 
 
 	//log is too long for sending most times... need to split into multiple messages if exceeds 255 characters, and send each message separately.

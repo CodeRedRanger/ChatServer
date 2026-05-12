@@ -94,6 +94,23 @@ void Logger::LogPublicMessage(SOCKET client, const std::string& message)
 
 std::string Logger::GetPublicChatLog()
 {
+	/*
+	std::string filename = "./Logs/public_chat_log.txt";
+	std::string command = "notepad \"" + filename + "\"";
+	std::system(command.c_str());
+	*/
+
+	std::string filename = "./Logs/public_chat_log.txt";
+
+	ShellExecuteA(
+		NULL,
+		"open",
+		"notepad.exe",
+		filename.c_str(),
+		NULL,
+		SW_SHOW
+	);
+
 	std::ifstream file("./Logs/public_chat_log.txt");
 	std::stringstream buffer;
 	if (file.is_open())

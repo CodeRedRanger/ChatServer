@@ -51,3 +51,21 @@
 [2026-05-11 20:58] [tom] $getlog  
 [2026-05-11 20:59] [robb] $logout  
 [2026-05-11 21:00] [tom] $logout  
+[2026-05-12 08:41] [Unknown User] $register robb *********
+[2026-05-12 08:41] [Unknown User] $login robb *********
+[2026-05-12 08:41] [robb] $getlog  
+[2026-05-12 09:00] [Unknown User] $register robb *********
+[2026-05-12 09:00] [Unknown User] $login robb *********
+[2026-05-12 09:00] [robb] $getlog  
+[2026-05-12 09:28] [Unknown User] $register robb *********
+[2026-05-12 09:28] [Unknown User] $login robb *********
+[2026-05-12 09:29] [robb] $getlog  
+[2026-05-12 09:30] [robb] $logout  
+[2026-05-12 09:30] [Unknown User] $register robb *********
+[2026-05-12 09:30] [Unknown User] $login robb *********
+[2026-05-12 09:31] [robb] $getlog  
+[2026-05-12 09:31] [robb] $logout  
+[2026-05-12 09:46] [Unknown User] $register robb *********
+[2026-05-12 09:46] [Unknown User] $login robb *********
+[2026-05-12 09:46] [robb] $getlog  
+[2026-05-12 09:46] [robb] $logout  
