@@ -1,4 +1,5 @@
 #pragma once
+//these includes were not needed, even though research said they were needed
 //#include <windows.h>
 //#include <shellapi.h>
 #include <iostream>
@@ -13,12 +14,7 @@
 namespace Logger
 {
 	void LogPublicMessage(SOCKET client, const std::string& message);
-	//void LogError(const std::string& errorMessage);
-	void LogClientMessage(const std::string& username, const std::string& message);
-	//void LogClientConnection(const std::string& username);
-	//void LogClientDisconnection(const std::string& username);
 	void LogCommand(SOCKET client, const std::string& commandStr);
-	//void LogAuthEvent(const std::string& username, const std::string& event);
 
 	std::string GetTimestamp();
 	std::string GetCurrentUser(SOCKET client);
