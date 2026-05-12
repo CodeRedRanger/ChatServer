@@ -51,15 +51,20 @@ recvfrom(s,buffer,length,flags,NULL,NULL);
 
 
 
+
+// This function will run in a separate thread and will periodically broadcast the server's IP address and TCP port to the local network using UDP.
+//it passes a thread-safe flag by reference that controls lifecycle of loop (this is used in place of a mutex)
 void ThreadEntryPoint(
 	std::atomic<bool>& activeUsers,
 	std::string ipAddress,
 	uint16_t tcpPort)
 {
+	//used for timing of broadcast (for steady_clock, miiliseconds and seconds)
 	using namespace std::chrono;
 
-	SOCKET udpSocket =
-		socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	//UDP socket creation 
+	//IPv4, SOCK_DGRAM = UDP, UDP protocol
+	SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
 	if (udpSocket == INVALID_SOCKET)
 	{
@@ -67,79 +72,72 @@ void ThreadEntryPoint(
 		return;
 	}
 
-	BOOL opt = TRUE;
 
-	// allow broadcast
-	setsockopt(
-		udpSocket,
-		SOL_SOCKET,
-		SO_BROADCAST,
-		(char*)&opt,
-		sizeof(opt));
+	// enables broadcast
+	BOOL opt = TRUE;
+	//SOL_SOCKET = socket-level option, SO_BROADCAST: Enable broadcast permission, OPT point is true
+	setsockopt(udpSocket,SOL_SOCKET,SO_BROADCAST,(char*)&opt,sizeof(opt));
 
 	// optional reuse
-	setsockopt(
-		udpSocket,
-		SOL_SOCKET,
-		SO_REUSEADDR,
-		(char*)&opt,
-		sizeof(opt));
+	//allows socket to bind/use address even if another socket recently used it, restarts server quickly, multiple sockets on same port
+	setsockopt(udpSocket,SOL_SOCKET,SO_REUSEADDR,(char*)&opt,sizeof(opt));
 
+	//broadcast address set up (IPv4,port to big endian)
 	sockaddr_in broadcastAddr = {};
 	broadcastAddr.sin_family = AF_INET;
 	broadcastAddr.sin_port = htons(54000);
 
-	// 255.255.255.255
+	// 255.255.255.255 = packets go to all devices on LAN
 	broadcastAddr.sin_addr.s_addr = INADDR_BROADCAST;
 
-	auto lastHeartbeat = steady_clock::now();
+	//last time broadcast was sent
+	auto lastBroadcast = steady_clock::now();
 
 	std::cout << "UDP Thread Enter\n";
 
+	//while atomic variable is true (becomes false when there are no active current clients/no sockets in use)
+	//once escapes loop, will rejoin main thread
 	while (activeUsers)
 	{
+		//start clock, steady clock will not change even if system clock changes
 		auto now = steady_clock::now();
 
-		auto elapsed =
-			duration_cast<seconds>(now - lastHeartbeat);
+		//calculate time between clock and last broadcast
+		//duration_cast converts to whole seconds
+		auto elapsed = duration_cast<seconds>(now - lastBroadcast);
 
+		//5 second timer
 		if (elapsed.count() >= 5)
 		{
 			//const char* msg = "The server will be offline for routine maintenance tonight starting at 11:59 PM Eastern Time.";
 
-			std::string msg =
-				ipAddress + ":" +
-				std::to_string(tcpPort);
+			//build UDP message
+			std::string msg = ipAddress + ":" + std::to_string(tcpPort);
 
-			int result = sendto(
-				udpSocket,
-				msg.c_str(),
-				(int)msg.size(),
-				0,
-				(sockaddr*)&broadcastAddr,
-				sizeof(broadcastAddr));
+			//sends UDP packet to 255.255.255:54000
+			//socket that is sending data, paointer to message buffer, size of message in bytes, flags (none), destination address, size of address struct
+			int result = sendto(udpSocket,msg.c_str(),(int)msg.size(),0,(sockaddr*)&broadcastAddr,sizeof(broadcastAddr));
 
 			if (result == SOCKET_ERROR)
 			{
-				std::cout
-					<< "Broadcast failed: "
-					<< WSAGetLastError()
-					<< "\n";
+				//returns windows networking error code
+				std::cout << "Broadcast failed: " << WSAGetLastError() << "\n";
 			}
 			else
 			{
 				std::cout
-					<< "Broadcast sent: "
-					<< msg
-					<< "\n";
+					<< "Broadcast sent: " << msg << "\n";
 			}
 
-			lastHeartbeat = now;
+			//once message sent, lastbroadcast becomes now, so difference between now and lastbroadcast is 0 and will grow again toward 5. 
+			lastBroadcast = now;
 		}
 
+		//limits loop to 20 times per second, so not constantly checking time (since messages only sent every 5 seconds)
 		std::this_thread::sleep_for(milliseconds(50));
 	}
 
+	//release UDP socket and frees OS resources
 	closesocket(udpSocket);
 
 	std::cout << "UDP Thread Exit\n";
