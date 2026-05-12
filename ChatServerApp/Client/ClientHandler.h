@@ -2,6 +2,8 @@
 
 #include <ws2tcpip.h>  
 #include <iostream>
+#include <thread>
+#include <atomic>
 #include "../Server/TCPFraming.h"
 
 

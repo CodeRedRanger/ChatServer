@@ -1,30 +1,145 @@
 ﻿#include "ChatServer.h"
 
-
 /*
 
-//Put in message handler
-2. Routing
-if (command == "send")     → broadcast logic
+I've got to use the following:
 
-3. Public messages
-Anything without command character at the start of message
-broadcast public chat
+1. SO_REUSEADDR:
+• The SO_REUSEADDR option should be enabled to allow a socket to
+bind forcibly to a port that is already in use by another socket.
+The second socket should invoke setsockopt with the optname
+parameter set to SO_REUSEADDR and the optval parameter set to a
+boolean value of TRUE before calling bind on the same port as the
+original socket.
+2. SO_BROADCAST:
+• The SO_BROADCAST option should be enabled to allow outgoing
+broadcasts from a socket.
+3. UDP Socket Binding:
+• For UDP sockets that expect to receive messages, it is
+recommended to explicitly bind the socket to INADDR_ANY. This
+ensures that the application can receive UDP messages on any
+available network interface, and it avoids having the operating
+system automatically assign a port number.
 
-//command parsing layer (move to messageHandler)
-//authentication state tracking (move to authManager)
-//routing between commands vs chat messages (move to messageHandler)
+Some of the concepts we need to incorporate:
+Broadcast specific IP like 255.255.255.255
+struct socketaddr_in add; addr.sin_addr.s_addr = INADDR_BROADCAST;
 
+set up like this:
+doDiscovery
+{
+SOCKET s = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+int optVal = 1;
+setsockopt(s, SOL_SOCKET, SO_BROADCAST, $optVal, sizeof(optVal));
+sockaddr_in bcAddr;
+bcAddr.sin_family = AF_INET;
+bcAddr.sin_addr.s_addr = INADDR_BROADCAST;
+boardCastAddr.sin_port = htons(svPort);
+sendto(s, buffer, length, flags, &bcAddr, sizeof(bcAddr));
 
-//other files
-Component	Responsibility
-ChatServer	networking only IN PROGRESS
-MessageHandler	command parsing + routing
-AuthManager	users + login state DONE
-Logger	file writing TO DO LATER
-TcpFraming	send/recv safety  DONE
+The for receive:
+SOCKET s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+sockaddr_in addr;
+addr.sin_family = AF_INET;
+addr.sin_addr.s_addr = INADDR_ANY
+addr.sin_port = htons(svPort)
+bind(s,(sockaddr*)&addr,sizeof(addr));
+recvfrom(s,buffer,length,flags,NULL,NULL);
 
 */
+
+
+
+
+void ThreadEntryPoint(std::atomic<bool>& activeUsers)
+{
+	using namespace std::chrono;
+
+	SOCKET udpSocket =
+		socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+	if (udpSocket == INVALID_SOCKET)
+	{
+		std::cout << "UDP socket creation failed\n";
+		return;
+	}
+
+	BOOL opt = TRUE;
+
+	// allow broadcast
+	setsockopt(
+		udpSocket,
+		SOL_SOCKET,
+		SO_BROADCAST,
+		(char*)&opt,
+		sizeof(opt));
+
+	// optional reuse
+	setsockopt(
+		udpSocket,
+		SOL_SOCKET,
+		SO_REUSEADDR,
+		(char*)&opt,
+		sizeof(opt));
+
+	sockaddr_in broadcastAddr = {};
+	broadcastAddr.sin_family = AF_INET;
+	broadcastAddr.sin_port = htons(54000);
+
+	// 255.255.255.255
+	broadcastAddr.sin_addr.s_addr = INADDR_BROADCAST;
+
+	auto lastHeartbeat = steady_clock::now();
+
+	std::cout << "UDP Thread Enter\n";
+
+	while (activeUsers)
+	{
+		auto now = steady_clock::now();
+
+		auto elapsed =
+			duration_cast<seconds>(now - lastHeartbeat);
+
+		if (elapsed.count() >= 5)
+		{
+			const char* msg = "The server will be offline for routine maintenance tonight starting at 11:59 PM Eastern Time.";
+
+			int result = sendto(
+				udpSocket,
+				msg,
+				(int)strlen(msg),
+				0,
+				(sockaddr*)&broadcastAddr,
+				sizeof(broadcastAddr));
+
+			if (result == SOCKET_ERROR)
+			{
+				std::cout
+					<< "Broadcast failed: "
+					<< WSAGetLastError()
+					<< "\n";
+			}
+			else
+			{
+				std::cout
+					<< "Broadcast sent: "
+					<< msg
+					<< "\n";
+			}
+
+			lastHeartbeat = now;
+		}
+
+		std::this_thread::sleep_for(milliseconds(50));
+	}
+
+	closesocket(udpSocket);
+
+	std::cout << "UDP Thread Exit\n";
+}
+
+
+
 
 int Server::InitListeningSocket(uint16_t port, SOCKET& listenSocket, int capacity)
 {
@@ -114,6 +229,16 @@ void Server::Stop(SOCKET socket)
 
 void Server::ServerCode(void)
 {
+	//UDP Thread
+	std::atomic<bool> activeUsers = false;
+	std::thread udpThread;
+
+
+
+	
+
+
+
 
 	uint16_t port;
 	int capacity;
@@ -239,6 +364,7 @@ void Server::ServerCode(void)
 	int currentClients = 0;
 	while (true)
 	{
+
 		readySet = masterSet;
 
 		//blocking. waits for activity on any socket in the ready set, or new connections.
@@ -285,6 +411,14 @@ void Server::ServerCode(void)
 
 					TCPFraming::sendFrame(clientSocket, welcome.c_str(), welcome.size());
 
+					//if current clients is 1, start thread for UDP
+					if (currentClients == 1)
+					{
+						activeUsers = true;
+						udpThread = std::thread(ThreadEntryPoint, std::ref(activeUsers));
+					
+					}
+
 				}
 			}
 			else
@@ -305,10 +439,25 @@ void Server::ServerCode(void)
 				//Handle graceful shutdowns and connection errors
 				if (result == SHUTDOWN || result == DISCONNECT)
 				{
+
 					DisconnectClient(currentSocket, masterSet, currentClients);
 					AuthManager::logoutUser(currentSocket);
+
+					//make into helper
+					//if current clients is 0, can stop UDP thread 
+					if (currentClients == 0)
+					{
+						activeUsers = false;
+
+						if (udpThread.joinable())
+						{
+							udpThread.join();
+						}
+					}
+
 					continue;
 				}
+
 
 				bool shouldDisconnect = false;
 				shouldDisconnect = MessageHandler::HandleCommand(currentSocket, listenSocket, masterSet, commandChar, buffer, capacity);
@@ -316,8 +465,25 @@ void Server::ServerCode(void)
 				if (shouldDisconnect)
 				{
 					DisconnectClient(currentSocket, masterSet, currentClients);
+
+					//Make into helper
+							//if current clients is 0, can stop UDP thread 
+					if (currentClients == 0)
+					{
+						activeUsers = false;
+
+						if (udpThread.joinable())
+						{
+							udpThread.join();
+						}
+					}
+
+
+				
 					continue;
 				}
+
+		
 
 			}
 		}

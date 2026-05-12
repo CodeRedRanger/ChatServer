@@ -3,6 +3,79 @@
 #include "ClientHandler.h"
 
 
+//UDP
+/*
+void UDPDiscoveryThread(std::atomic<bool>& running)
+{
+	SOCKET udpRecv =
+		socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+	if (udpRecv == INVALID_SOCKET)
+	{
+		std::cout << "UDP socket failed\n";
+		return;
+	}
+
+	BOOL opt = TRUE;
+
+	DWORD timeout = 1000;
+
+	setsockopt(
+		udpRecv,
+		SOL_SOCKET,
+		SO_RCVTIMEO,
+		(char*)&timeout,
+		sizeof(timeout));
+
+	sockaddr_in addr = {};
+
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin_port = htons(54000);
+
+	if (bind(
+		udpRecv,
+		(sockaddr*)&addr,
+		sizeof(addr)) == SOCKET_ERROR)
+	{
+		std::cout << "UDP bind failed\n";
+
+		closesocket(udpRecv);
+		return;
+	}
+
+	char buffer[256];
+
+
+	while (running)
+	{
+		sockaddr_in senderAddr;
+		int senderLen = sizeof(senderAddr);
+
+		int result = recvfrom(
+			udpRecv,
+			buffer,
+			sizeof(buffer) - 1,
+			0,
+			(sockaddr*)&senderAddr,
+			&senderLen);
+
+		if (result > 0)
+		{
+			buffer[result] = '\0';
+
+			std::cout
+				<< "UDP Discovery: "
+				<< buffer
+				<< "\n";
+		}
+	}
+
+
+	closesocket(udpRecv);
+}
+*/
+
 //gracefully closes socket by first shutting down both send and receive operations, then closing the socket handle.
 void Client::Stop(SOCKET socket)
 {
@@ -71,10 +144,19 @@ void Client::ClientCode(void)
 
 
 
+	//UDP
+	/*
+	std::atomic<bool> running = true;
+
+	std::thread udpThread(
+		UDPDiscoveryThread,
+		std::ref(running));*/
+
+
+	//TCP
 	//Communication
 	//can receive 256 + 1 for size byte, but buffer needs to be 257 to hold null terminator for printf
 	char recvbuffer[257] = {};
-
 	while (true)
 	{
 		result = TCPFraming::readFrame(ComSocket, recvbuffer, sizeof(recvbuffer));
@@ -136,4 +218,10 @@ void Client::ClientCode(void)
 
 	// close sockets
 	Stop(ComSocket);
+	/*
+	running = false;
+	if (udpThread.joinable())
+	{
+		udpThread.join();
+	}*/
 }
