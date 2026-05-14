@@ -118,6 +118,18 @@ int Client::InitCommSocket(SOCKET& comSocket, uint16_t port, const char* address
 	// if the address or port is incorrect, or if there are network issues preventing the connection, firewall.
 	if (result == SOCKET_ERROR)
 	{
+
+		int err = WSAGetLastError();
+		if (err == WSAESHUTDOWN)
+		{
+			std::cout << "connect() : socket shutdown detected\n";
+			closesocket(comSocket);
+			return CONNECT_ERROR;
+		}
+
+
+		// For other errors, log the error code and return a generic connection error.
+		std::cout << "connect() failed with error: " << err << "\n";
 		closesocket(comSocket);
 		return CONNECT_ERROR;
 	}

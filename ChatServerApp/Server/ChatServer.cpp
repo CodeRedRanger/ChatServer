@@ -397,6 +397,20 @@ void Server::ServerCode(void)
 				//accept new connection, add to master set and increment client count
 				clientSocket = accept(listenSocket, NULL, NULL);
 
+				if (clientSocket == INVALID_SOCKET)
+				{
+					int err = WSAGetLastError();
+
+					if (err == WSAESHUTDOWN)
+					{
+						std::cout << "accept(): socket shutdown detected\n";
+						continue;
+					}
+
+					std::cout << "accept() failed: " << err << "\n";
+					continue;
+				}
+
 				if (clientSocket != INVALID_SOCKET)
 				{
 					FD_SET(clientSocket, &masterSet);

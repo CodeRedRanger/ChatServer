@@ -82,3 +82,8 @@
 [2026-05-12 14:19] [Unknown User] $login robb *********
 [2026-05-12 14:19] [Unknown User] $register tom *********
 [2026-05-12 14:19] [Unknown User] $login tom *********
+[2026-05-14 13:45] [Unknown User] $register robb *********
+[2026-05-14 13:45] [Unknown User] $login robb *********
+[2026-05-14 13:45] [Unknown User] $register tom *********
+[2026-05-14 13:45] [Unknown User] $login tom *********
+[2026-05-14 13:46] [robb] $logout  
